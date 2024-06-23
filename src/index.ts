@@ -1,16 +1,16 @@
+import { format } from "prettier";
 import {
   ScriptTarget,
+  SyntaxKind,
   createSourceFile,
   forEachChild,
-  isIdentifier,
+  isFunctionDeclaration,
+  isReturnStatement,
   type Node,
   type TextChange,
 } from "typescript";
 
 const inputFile = Bun.file(process.argv[2]);
-
-const originalName = "kKi";
-const newName = "_renameTest";
 
 // Read the file
 const sourceFile = createSourceFile(
@@ -24,18 +24,63 @@ const sourceFile = createSourceFile(
 const updates: TextChange[] = [];
 
 // Using a node visitor to find and rename symbols
-const visit = (node: Node) => {
-  if (isIdentifier(node) && node.text === originalName) {
-    updates.push({
-      span: { start: node.getStart(), length: node.getWidth() },
-      newText: newName,
-    });
+const visit = async (node: Node) => {
+  // Renaming symbols
+  // if (isIdentifier(node) && node.text === originalName) {
+  //   updates.push({
+  //     span: { start: node.getStart(), length: node.getWidth() },
+  //     newText: newName,
+  //   });
+  // }
+
+  if (isFunctionDeclaration(node) && node.name) {
+    const functionSize = node.getEnd() - node.getStart();
+
+    if (functionSize <= 300) {
+      if (node.body) {
+        if (node.body.statements.length === 1 && node.name.getText() === "ve") {
+          const returnStatement = node.body.statements[0];
+
+          console.log(
+            "params:",
+            node.parameters.map((p) => p.name.getText())
+          );
+
+          console.log("returnStatement:", returnStatement.getText());
+
+          if (returnStatement && isReturnStatement(returnStatement)) {
+            if (returnStatement.expression) {
+              console.log(
+                "return expression:",
+                returnStatement.expression.getText()
+              );
+            } else {
+              // rename all of the function's references to undefined
+            }
+          }
+        }
+      }
+
+      // const prettyFunction = await format(node.getFullText(), {
+      //   parser: "typescript",
+      // });
+
+      // // send to llm
+      // console.log("function size: ", functionSize);
+      // console.log(prettyFunction);
+    }
   }
 
-  forEachChild(node, visit);
+  const promises: Promise<void>[] = [];
+
+  forEachChild(node, (childNode) => {
+    promises.push(visit(childNode));
+  });
+
+  await Promise.all(promises);
 };
 
-visit(sourceFile);
+await visit(sourceFile);
 
 // Apply changes to the file content
 let content = sourceFile.getFullText();
@@ -47,5 +92,3 @@ updates.reverse().forEach((change) => {
 });
 
 await Bun.write("out.cjs", content);
-
-console.log(`Renamed "${originalName}" to "${newName}"`);
