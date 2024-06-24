@@ -1,73 +1,52 @@
 import { format } from "prettier";
 import {
+  ScriptKind,
   ScriptTarget,
-  SyntaxKind,
   createSourceFile,
   forEachChild,
-  isFunctionDeclaration,
-  isReturnStatement,
+  isIdentifier,
   type Node,
   type TextChange,
 } from "typescript";
 
-const inputFile = Bun.file(process.argv[2]);
+import { transformers, type SymbolsRenameMap } from "./transformers";
 
-// Read the file
-const sourceFile = createSourceFile(
-  inputFile.name!,
-  await inputFile.text(),
-  ScriptTarget.Latest,
-  true
-);
+const inputFile = Bun.file(process.argv[2]);
 
 // Create an update array
 const updates: TextChange[] = [];
 
+// Symbols to rename
+const symbolsToRename: SymbolsRenameMap = new Map();
+
 // Using a node visitor to find and rename symbols
 const visit = async (node: Node) => {
   // Renaming symbols
-  // if (isIdentifier(node) && node.text === originalName) {
-  //   updates.push({
-  //     span: { start: node.getStart(), length: node.getWidth() },
-  //     newText: newName,
-  //   });
-  // }
+  if (isIdentifier(node) && symbolsToRename.has(node.text)) {
+    const textChange: TextChange = {
+      span: {
+        start: node.getStart(),
+        length: node.getWidth(),
+      },
+      newText: symbolsToRename.get(node.text)!,
+    };
 
-  if (isFunctionDeclaration(node) && node.name) {
-    const functionSize = node.getEnd() - node.getStart();
+    updates.push(textChange);
+  } else {
+    for (const transformer of transformers) {
+      if (transformer.accepts(node)) {
+        const [symbols, textChanges] = await transformer.transform(node);
 
-    if (functionSize <= 300) {
-      if (node.body) {
-        if (node.body.statements.length === 1 && node.name.getText() === "ve") {
-          const returnStatement = node.body.statements[0];
-
-          console.log(
-            "params:",
-            node.parameters.map((p) => p.name.getText())
-          );
-
-          console.log("returnStatement:", returnStatement.getText());
-
-          if (returnStatement && isReturnStatement(returnStatement)) {
-            if (returnStatement.expression) {
-              console.log(
-                "return expression:",
-                returnStatement.expression.getText()
-              );
-            } else {
-              // rename all of the function's references to undefined
-            }
+        if (symbols) {
+          for (const [oldName, newName] of symbols) {
+            symbolsToRename.set(oldName, newName);
           }
         }
+
+        updates.push(...textChanges);
+
+        break;
       }
-
-      // const prettyFunction = await format(node.getFullText(), {
-      //   parser: "typescript",
-      // });
-
-      // // send to llm
-      // console.log("function size: ", functionSize);
-      // console.log(prettyFunction);
     }
   }
 
@@ -80,15 +59,43 @@ const visit = async (node: Node) => {
   await Promise.all(promises);
 };
 
-await visit(sourceFile);
+// let content = await format(await inputFile.text(), {
+//   parser: "typescript",
+//   filepath: inputFile.name,
+// });
+let content = await inputFile.text();
 
-// Apply changes to the file content
-let content = sourceFile.getFullText();
-updates.reverse().forEach((change) => {
-  content =
-    content.slice(0, change.span.start) +
-    change.newText +
-    content.slice(change.span.start + change.span.length);
-});
+let i = 0;
+while (i < 3) {
+  console.log("Iteration", i);
+
+  // Read the file
+  const sourceFile = createSourceFile(
+    inputFile.name!,
+    content,
+    ScriptTarget.Latest,
+    true,
+    ScriptKind.JS
+  );
+
+  console.debug("Symbols to rename:", symbolsToRename);
+
+  await visit(sourceFile);
+
+  if (!updates.length) {
+    break;
+  }
+
+  // Apply changes to the file content
+  updates.reverse().forEach((change) => {
+    content =
+      content.slice(0, change.span.start) +
+      change.newText +
+      content.slice(change.span.start + change.span.length);
+  });
+  updates.length = 0;
+
+  i++;
+}
 
 await Bun.write("out.cjs", content);
