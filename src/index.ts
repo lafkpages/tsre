@@ -1,6 +1,6 @@
 import { format } from "prettier";
 import putout from "putout";
-import { guessNewIdentifierName } from "./ai";
+import { guessNewIdentifierName, saveCache } from "./ai";
 
 const inputFile = Bun.file("./src/test/dummy.js");
 let content = await inputFile.text();
@@ -122,3 +122,5 @@ content = await format(content, {
 });
 
 await Bun.write("out.js", content);
+
+await saveCache();
