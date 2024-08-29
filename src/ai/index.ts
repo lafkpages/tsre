@@ -1,48 +1,41 @@
 import { join } from "node:path";
 
-const cache = new Map<string, Map<string, string>>();
+const cache = new Map<number, string>();
 const cacheFile = Bun.file("./.cache/ai.json");
 
+// prettier-ignore
+type CacheData = Record<number, string>;
+
 try {
-  const cacheData = (await cacheFile.json()) as Record<
-    string,
-    Record<string, string>
-  >;
+  const cacheData = (await cacheFile.json()) as CacheData;
 
   for (const [key, value] of Object.entries(cacheData)) {
-    const subCache = new Map<string, string>();
-
-    for (const [subKey, subValue] of Object.entries(value)) {
-      subCache.set(subKey, subValue);
-    }
-
-    cache.set(key, subCache);
+    cache.set(parseInt(key), value);
   }
 } catch (error) {
   console.error("Failed to load cache", error);
 }
 
 export async function saveCache() {
-  const cacheData: Record<string, Record<string, string>> = {};
+  const cacheData: CacheData = {};
 
-  for (const [key, value] of cache.entries()) {
-    const subCache: Record<string, string> = {};
-
-    for (const [subKey, subValue] of value.entries()) {
-      subCache[subKey] = subValue;
-    }
-
-    cacheData[key] = subCache;
+  for (const [key, value] of cache) {
+    cacheData[key] = value;
   }
 
   await Bun.write(cacheFile, JSON.stringify(cacheData));
+}
+
+function getCacheHash(identifierType: string, context: string) {
+  return Bun.hash.adler32(`${identifierType}:${context}`);
 }
 
 export function guessNewIdentifierName(
   identifierType: string,
   context: string,
 ) {
-  const cached = cache.get(identifierType)?.get(context);
+  const cacheHash = getCacheHash(identifierType, context);
+  const cached = cache.get(cacheHash);
   if (cached) {
     return cached;
   }
@@ -61,13 +54,8 @@ export function guessNewIdentifierName(
   if (proc.success) {
     const newName = proc.stdout.toString().trim();
 
-    let subCache = cache.get(identifierType);
-    if (!subCache) {
-      subCache = new Map();
-      cache.set(identifierType, subCache);
-    }
+    cache.set(cacheHash, newName);
 
-    subCache.set(context, newName);
     return newName;
   }
 
