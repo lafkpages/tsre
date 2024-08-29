@@ -1,7 +1,12 @@
 import type { NodePath } from "@babel/traverse";
 import type { Identifier } from "@babel/types";
 
-import { isFunctionDeclaration } from "@babel/types";
+import {
+  isForOfStatement,
+  isFunctionDeclaration,
+  isVariableDeclaration,
+  isVariableDeclarator,
+} from "@babel/types";
 import { format } from "prettier";
 import putout from "putout";
 
@@ -159,7 +164,49 @@ interface PushData {
                 }
               }
 
-              debugger;
+              if (
+                isVariableDeclarator(path.parent) &&
+                isVariableDeclaration(path.parentPath.parent)
+              ) {
+                let declarationText: string | null = null;
+
+                if (isForOfStatement(path.parentPath.parentPath?.parent)) {
+                  const start = path.parentPath.parentPath.parent.start;
+                  const end = path.parentPath.parentPath.parent.right.end;
+
+                  if (start && end) {
+                    declarationText = content.slice(start, end);
+                  }
+                }
+
+                // TODO: Handle other types of variable declarations
+
+                if (declarationText) {
+                  declarationText = `/* rename variable "${name}" */\n${declarationText}`;
+
+                  console.log("Asking for new variable name", {
+                    name,
+                    declarationText,
+                  });
+
+                  const newVariableName = guessNewIdentifierName(
+                    "variable",
+                    declarationText,
+                  );
+
+                  console.log("Got new variable name:", {
+                    name,
+                    newVariableName,
+                  });
+
+                  push({
+                    path,
+                    newName: newVariableName,
+                  });
+                } else {
+                  console.log("Variable declaration type not supported");
+                }
+              }
             },
           };
         },
