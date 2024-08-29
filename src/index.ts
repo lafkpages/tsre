@@ -1,6 +1,7 @@
 import type { NodePath } from "@babel/traverse";
 import type { Identifier } from "@babel/types";
 
+import { isFunctionDeclaration } from "@babel/types";
 import { format } from "prettier";
 import putout from "putout";
 
@@ -72,7 +73,7 @@ interface PushData {
                   ? null
                   : path.container;
 
-              if (container?.type === "FunctionDeclaration") {
+              if (isFunctionDeclaration(container)) {
                 if (
                   typeof container.start !== "number" ||
                   typeof container.end !== "number"
@@ -113,7 +114,7 @@ interface PushData {
                 return;
               }
 
-              if (path.parent.type === "FunctionDeclaration") {
+              if (isFunctionDeclaration(path.parent)) {
                 if (path.listKey === "params") {
                   if (
                     typeof path.parent.start !== "number" ||
