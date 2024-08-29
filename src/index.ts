@@ -170,9 +170,18 @@ interface PushData {
               ) {
                 let declarationText: string | null = null;
 
+                debugger;
+
                 if (isForOfStatement(path.parentPath.parentPath?.parent)) {
                   const start = path.parentPath.parentPath.parent.start;
                   const end = path.parentPath.parentPath.parent.right.end;
+
+                  if (start && end) {
+                    declarationText = content.slice(start, end);
+                  }
+                } else if (path.parent.init) {
+                  const start = path.parentPath.parent.start;
+                  const end = path.parentPath.parent.end;
 
                   if (start && end) {
                     declarationText = content.slice(start, end);
