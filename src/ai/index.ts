@@ -1,10 +1,10 @@
 import { join } from "node:path";
 
-const cache = new Map<number, string>();
+const cache = new Map<number, AIResult>();
 const cacheFile = Bun.file("./.cache/ai.json");
 
 // prettier-ignore
-type CacheData = Record<number, string>;
+type CacheData = Record<string, AIResult>;
 
 try {
   const cacheData = (await cacheFile.json()) as CacheData;
@@ -26,15 +26,24 @@ export async function saveCache() {
   await Bun.write(cacheFile, JSON.stringify(cacheData));
 }
 
-function getCacheHash(identifierType: string, context: string) {
-  return Bun.hash.adler32(`${identifierType}:${context}`);
+function getCacheHash(identifierType: string, data: string, context: string) {
+  return Bun.hash.adler32(`${identifierType}:${data}:${context}`);
+}
+
+export interface AIResult {
+  newName: string;
+  additionalProgramContext?: string;
 }
 
 export function guessNewIdentifierName(
+  usedBindings: string[],
   identifierType: string,
-  context: string,
+  data: string,
+  context?: string,
 ) {
-  const cacheHash = getCacheHash(identifierType, context);
+  context ||= "";
+
+  const cacheHash = getCacheHash(identifierType, data, context);
   const cached = cache.get(cacheHash);
   if (cached) {
     return cached;
@@ -46,17 +55,19 @@ export function guessNewIdentifierName(
       "run",
       join(__dirname, "proc.ts"),
       "--",
+      usedBindings.join(","),
       identifierType,
+      data,
       context,
     ],
   });
 
   if (proc.success) {
-    const newName = proc.stdout.toString().trim();
+    const result = JSON.parse(proc.stdout.toString()) as AIResult;
 
-    cache.set(cacheHash, newName);
+    cache.set(cacheHash, result);
 
-    return newName;
+    return result;
   }
 
   throw new Error(

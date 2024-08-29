@@ -1,5 +1,7 @@
 import type { NodePath } from "@babel/traverse";
 import type { Identifier, VariableDeclarator } from "@babel/types";
+import type { AIResult } from "./ai";
+import type { ParametersButFirst } from "./types/helpers";
 
 import {
   isArrayPattern,
@@ -11,7 +13,10 @@ import {
 import { format } from "prettier";
 import putout from "putout";
 
-import { guessNewIdentifierName, saveCache } from "./ai";
+import {
+  guessNewIdentifierName as _guessNewIdentifierName,
+  saveCache,
+} from "./ai";
 
 const inputFile = Bun.file("./src/test/dummy.js");
 let content = await inputFile.text();
@@ -28,8 +33,10 @@ type IdentifierNodePath = NodePath<Identifier>;
 
 interface PushData {
   path: IdentifierNodePath;
-  newName: string;
+  aiResult: AIResult;
 }
+
+let programContext = "";
 
 ({ code: content } = putout(content, {
   plugins: [
@@ -40,9 +47,9 @@ interface PushData {
           return "tsre";
         },
 
-        fix({ path, newName }: PushData) {
+        fix({ path, aiResult }: PushData) {
           const { name } = path.node;
-          path.scope.rename(name, newName);
+          path.scope.rename(name, aiResult.newName);
         },
 
         traverse({ push: _push }: { push: (data: PushData) => void }) {
@@ -56,7 +63,12 @@ interface PushData {
               renamed.set(data.path.scope.uid, scopeRenamed);
             }
 
-            scopeRenamed.add(data.newName);
+            scopeRenamed.add(data.aiResult.newName);
+
+            if (data.aiResult.additionalProgramContext) {
+              programContext += data.aiResult.additionalProgramContext;
+              programContext += "\n";
+            }
           }
 
           return {
@@ -70,6 +82,14 @@ interface PushData {
 
               if (scopeRenamed?.has(name)) {
                 return;
+              }
+
+              function guessNewIdentifierName(
+                ...args: // prettier-ignore
+                ParametersButFirst<typeof _guessNewIdentifierName>
+              ) {
+                const bindings = Object.keys(path.scope.getAllBindings());
+                return _guessNewIdentifierName(bindings, ...args);
               }
 
               console.log("Traversing identifier:", name);
@@ -99,19 +119,20 @@ interface PushData {
                     functionDeclarationText,
                   });
 
-                  const newFunctionName = guessNewIdentifierName(
+                  const aiResult = guessNewIdentifierName(
                     "function",
                     functionDeclarationText,
+                    programContext,
                   );
 
                   console.log("Got new function name:", {
                     name,
-                    newFunctionName,
+                    aiResult,
                   });
 
                   push({
                     path,
-                    newName: newFunctionName,
+                    aiResult,
                   });
                 } else {
                   console.log("Function declaration too long, skipping");
@@ -141,19 +162,20 @@ interface PushData {
                       functionDeclarationText,
                     });
 
-                    const newParameterName = guessNewIdentifierName(
+                    const aiResult = guessNewIdentifierName(
                       "parameter",
                       `/* rename parameter "${name}" */\n${functionDeclarationText}`,
+                      programContext,
                     );
 
                     console.log("Got new parameter name:", {
                       name,
-                      newParameterName,
+                      aiResult,
                     });
 
                     push({
                       path,
-                      newName: newParameterName,
+                      aiResult,
                     });
                   } else {
                     console.log(
@@ -221,19 +243,20 @@ interface PushData {
                       declarationText,
                     });
 
-                    const newVariableName = guessNewIdentifierName(
+                    const aiResult = guessNewIdentifierName(
                       "variable",
                       declarationText,
+                      programContext,
                     );
 
                     console.log("Got new variable name:", {
                       name,
-                      newVariableName,
+                      aiResult,
                     });
 
                     push({
                       path,
-                      newName: newVariableName,
+                      aiResult,
                     });
                   } else {
                     console.log("Variable declaration type not supported");
@@ -252,10 +275,15 @@ interface PushData {
   ],
 }));
 
+console.log("Done traversing");
+console.log(`Program context:\n${programContext}`);
+
 content = await format(content, {
   parser: "typescript",
   filepath: inputFile.name,
 });
+
+console.log("Done formatting");
 
 await Bun.write("out.js", content);
 
