@@ -7,6 +7,8 @@ let content = await inputFile.text();
 
 const renamed = new Set<string>();
 
+const maxFunctionLength = 500;
+
 ({ code: content } = putout(content, {
   plugins: [
     [
@@ -35,45 +37,75 @@ const renamed = new Set<string>();
 
               console.log("Traversing identifier", name, path.container.type);
 
-              switch (path.container.type) {
-                case "FunctionDeclaration": {
-                  if (path.container.end - path.container.start <= 500) {
+              if (path.container.type === "FunctionDeclaration") {
+                if (
+                  path.container.end - path.container.start <=
+                  maxFunctionLength
+                ) {
+                  const functionDeclarationText = content.slice(
+                    path.container.start,
+                    path.container.end
+                  );
+
+                  console.log("Asking for new function name", {
+                    name,
+                    functionDeclarationText,
+                  });
+
+                  const newFunctionName = guessNewIdentifierName(
+                    "function",
+                    functionDeclarationText
+                  );
+
+                  console.log("Got new function name:", {
+                    name,
+                    newFunctionName,
+                  });
+
+                  push({
+                    path,
+                    newName: newFunctionName,
+                  });
+                  renamed.add(newFunctionName);
+                } else {
+                  console.log("Function declaration too long, skipping");
+                }
+              } else if (path.parent.type === "FunctionDeclaration") {
+                if (path.listKey === "params") {
+                  if (
+                    path.parent.end - path.parent.start <=
+                    maxFunctionLength
+                  ) {
                     const functionDeclarationText = content.slice(
-                      path.container.start,
-                      path.container.end
+                      path.parent.start,
+                      path.parent.end
                     );
 
-                    console.log("Asking for new function name", {
+                    console.log("Asking for new parameter name", {
                       name,
                       functionDeclarationText,
                     });
 
-                    const newFunctionName = guessNewIdentifierName(
-                      "function",
-                      functionDeclarationText
+                    const newParameterName = guessNewIdentifierName(
+                      "parameter",
+                      `/* rename parameter "${name}" */\n${functionDeclarationText}`
                     );
 
-                    console.log("Got new function name:", {
+                    console.log("Got new parameter name:", {
                       name,
-                      newFunctionName,
+                      newParameterName,
                     });
 
                     push({
                       path,
-                      newName: newFunctionName,
+                      newName: newParameterName,
                     });
-                    renamed.add(newFunctionName);
-
-                    break;
+                    renamed.add(newParameterName);
+                  } else {
+                    console.log(
+                      "Function declaration for parameter too long, skipping"
+                    );
                   }
-
-                  console.log("Function declaration too long, skipping");
-
-                  break;
-                }
-
-                default: {
-                  debugger;
                 }
               }
             },
