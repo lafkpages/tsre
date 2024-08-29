@@ -1,6 +1,6 @@
 import { format } from "prettier";
 import putout from "putout";
-import { getNewFunctionNameSync } from "./openai";
+import { guessNewIdentifierName } from "./ai";
 
 const inputFile = Bun.file("./src/test/dummy.js");
 let content = await inputFile.text();
@@ -33,46 +33,49 @@ const renamed = new Set<string>();
                 return;
               }
 
-              global.__idf = path;
+              console.log("Traversing identifier", name, path.container.type);
 
-              const isFunctionDeclaration =
-                path.container.type === "FunctionDeclaration";
+              switch (path.container.type) {
+                case "FunctionDeclaration": {
+                  if (path.container.end - path.container.start <= 500) {
+                    const functionDeclarationText = content.slice(
+                      path.container.start,
+                      path.container.end
+                    );
 
-              console.debug(
-                name,
-                isFunctionDeclaration
+                    console.log("Asking for new function name", {
+                      name,
+                      functionDeclarationText,
+                    });
 
-                // bindings
-              );
-              if (isFunctionDeclaration) {
-                if (path.container.end - path.container.start <= 500) {
-                  const functionDeclarationText = content.slice(
-                    path.container.start,
-                    path.container.end
-                  );
+                    const newFunctionName = guessNewIdentifierName(
+                      "function",
+                      functionDeclarationText
+                    );
 
-                  console.log("Asking for new function name", {
-                    name,
-                    functionDeclarationText,
-                  });
+                    console.log("Got new function name:", {
+                      name,
+                      newFunctionName,
+                    });
 
-                  const newFunctionName = getNewFunctionNameSync(
-                    functionDeclarationText
-                  );
+                    push({
+                      path,
+                      newName: newFunctionName,
+                    });
+                    renamed.add(newFunctionName);
 
-                  console.log("Got new function name:", {
-                    name,
-                    newFunctionName,
-                  });
+                    break;
+                  }
 
-                  push({
-                    path,
-                    newName: newFunctionName,
-                  });
-                  renamed.add(newFunctionName);
+                  console.log("Function declaration too long, skipping");
+
+                  break;
+                }
+
+                default: {
+                  debugger;
                 }
               }
-              debugger;
             },
           };
         },
