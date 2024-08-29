@@ -1,6 +1,8 @@
+import { join } from "node:path";
+
 const cache = new Map<string, Map<string, string>>();
 const cacheFile = Bun.file("./.cache/ai.json");
-import { join } from "node:path";
+
 try {
   const cacheData = (await cacheFile.json()) as Record<
     string,
@@ -38,7 +40,7 @@ export async function saveCache() {
 
 export function guessNewIdentifierName(
   identifierType: string,
-  context: string
+  context: string,
 ) {
   const cached = cache.get(identifierType)?.get(context);
   if (cached) {
@@ -70,6 +72,6 @@ export function guessNewIdentifierName(
   }
 
   throw new Error(
-    `Failed to execute sync Bun process for getNewFunctionName (exit code ${proc.exitCode}):\n${proc.stderr.toString()}`
+    `Failed to execute sync Bun process for getNewFunctionName (exit code ${proc.exitCode}):\n${proc.stderr.toString()}`,
   );
 }

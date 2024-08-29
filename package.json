@@ -3,17 +3,19 @@
   "module": "src/index.ts",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@ianvs/prettier-plugin-sort-imports": "^4.3.1",
+    "@types/bun": "^1.1.8"
   },
   "peerDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.5.4"
   },
   "dependencies": {
     "openai": "^4.56.1",
-    "prettier": "^3.3.2",
-    "putout": "^36.3.1"
+    "prettier": "^3.3.3",
+    "putout": "^36.4.1"
   },
   "scripts": {
-    "build-dummy": "bun build ./src/test/dummy.ts --minify --outfile ./src/test/dummy.js"
+    "build-dummy": "bun build ./src/test/dummy.ts --minify --outfile ./src/test/dummy.js",
+    "format": "prettier --write ."
   }
 }

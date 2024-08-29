@@ -1,5 +1,6 @@
 import { format } from "prettier";
 import putout from "putout";
+
 import { guessNewIdentifierName, saveCache } from "./ai";
 
 const inputFile = Bun.file("./src/test/dummy.js");
@@ -44,7 +45,7 @@ const maxFunctionLength = 500;
                 ) {
                   const functionDeclarationText = content.slice(
                     path.container.start,
-                    path.container.end
+                    path.container.end,
                   );
 
                   console.log("Asking for new function name", {
@@ -54,7 +55,7 @@ const maxFunctionLength = 500;
 
                   const newFunctionName = guessNewIdentifierName(
                     "function",
-                    functionDeclarationText
+                    functionDeclarationText,
                   );
 
                   console.log("Got new function name:", {
@@ -78,7 +79,7 @@ const maxFunctionLength = 500;
                   ) {
                     const functionDeclarationText = content.slice(
                       path.parent.start,
-                      path.parent.end
+                      path.parent.end,
                     );
 
                     console.log("Asking for new parameter name", {
@@ -88,7 +89,7 @@ const maxFunctionLength = 500;
 
                     const newParameterName = guessNewIdentifierName(
                       "parameter",
-                      `/* rename parameter "${name}" */\n${functionDeclarationText}`
+                      `/* rename parameter "${name}" */\n${functionDeclarationText}`,
                     );
 
                     console.log("Got new parameter name:", {
@@ -103,7 +104,7 @@ const maxFunctionLength = 500;
                     renamed.add(newParameterName);
                   } else {
                     console.log(
-                      "Function declaration for parameter too long, skipping"
+                      "Function declaration for parameter too long, skipping",
                     );
                   }
                 }

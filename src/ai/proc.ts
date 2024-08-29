@@ -4,7 +4,7 @@ export const openai = new OpenAI();
 
 async function guessNewIdentifierNameAsync(
   identifierType: string,
-  context: string
+  context: string,
 ) {
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
