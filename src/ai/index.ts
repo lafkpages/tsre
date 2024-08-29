@@ -1,5 +1,5 @@
 const cache = new Map<string, Map<string, string>>();
-const cacheFile = Bun.file("./.cache/openai.json");
+const cacheFile = Bun.file("./.cache/ai.json");
 import { join } from "node:path";
 try {
   const cacheData = (await cacheFile.json()) as Record<
