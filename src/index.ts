@@ -1,124 +1,89 @@
-import {
-  ScriptTarget,
-  createSourceFile,
-  forEachChild,
-  isIdentifier,
-  type Node,
-  type TextChange,
-} from "typescript";
-
-import { transformers } from "./transformers";
 import { format } from "prettier";
+import putout from "putout";
+import { getNewFunctionNameSync } from "./openai";
 
 const inputFile = Bun.file("./src/test/dummy.js");
+let content = await inputFile.text();
 
-// Create an update array
-const updates: TextChange[] = [];
+const renamed = new Set<string>();
 
-// Symbols to rename
-const symbolsToRename: Map<string, [string, number]> = new Map();
-const symbolsRenamed: Set<string> = new Set();
+({ code: content } = putout(content, {
+  plugins: [
+    [
+      "tsre",
+      {
+        report() {
+          return "tsre";
+        },
 
-// Using a node visitor to find and rename symbols
-const visit = async (node: Node) => {
-  // Renaming symbols
-  if (
-    isIdentifier(node) &&
-    symbolsToRename.has(node.text) &&
-    !symbolsRenamed.has(node.text)
-  ) {
-    const textChange: TextChange = {
-      span: {
-        start: node.getStart(),
-        length: node.getWidth(),
+        fix({ path, newName }) {
+          const { name } = path.node;
+          path.scope.rename(name, newName);
+        },
+
+        traverse({ push }) {
+          return {
+            Identifier(path) {
+              const { name } = path.node;
+              if (!path.scope.hasBinding(name)) {
+                return;
+              }
+
+              if (renamed.has(name)) {
+                return;
+              }
+
+              global.__idf = path;
+
+              const isFunctionDeclaration =
+                path.container.type === "FunctionDeclaration";
+
+              console.debug(
+                name,
+                isFunctionDeclaration
+
+                // bindings
+              );
+              if (isFunctionDeclaration) {
+                if (path.container.end - path.container.start <= 500) {
+                  const functionDeclarationText = content.slice(
+                    path.container.start,
+                    path.container.end
+                  );
+
+                  console.log("Asking for new function name", {
+                    name,
+                    functionDeclarationText,
+                  });
+
+                  const newFunctionName = getNewFunctionNameSync(
+                    functionDeclarationText
+                  );
+
+                  console.log("Got new function name:", {
+                    name,
+                    newFunctionName,
+                  });
+
+                  push({
+                    path,
+                    newName: newFunctionName,
+                  });
+                  renamed.add(newFunctionName);
+                }
+              }
+              debugger;
+            },
+          };
+        },
       },
-      newText: symbolsToRename.get(node.text)![0],
-    };
+    ],
+  ],
+}));
 
-    updates.push(textChange);
-    symbolsRenamed.add(node.text);
-  } else {
-    for (const transformer of transformers) {
-      if (transformer.accepts(node)) {
-        const [symbols, textChanges] = await transformer.transform(node);
-
-        if (symbols) {
-          for (const [oldName, newName] of symbols) {
-            symbolsToRename.set(oldName, [newName, 0]);
-          }
-        }
-
-        updates.push(...textChanges);
-
-        break;
-      }
-    }
-  }
-
-  const promises: Promise<void>[] = [];
-
-  forEachChild(node, (childNode) => {
-    promises.push(visit(childNode));
-  });
-
-  await Promise.all(promises);
-};
-
-let content = await format(await inputFile.text(), {
+content = await format(content, {
   parser: "typescript",
   filepath: inputFile.name,
 });
-
-let i = 0;
-while (i < 3) {
-  console.log("Iteration", i);
-
-  // Read the file
-  const sourceFile = createSourceFile("", content, ScriptTarget.Latest, true);
-
-  symbolsToRename.set("y", ["convertFtoC", 0]);
-
-  // Gather updates from transformers
-  await visit(sourceFile);
-
-  // If no updates, we can stop
-  if (!updates.length) {
-    break;
-  }
-
-  // Apply changes to the file content
-  for (const update of updates) {
-    console.debug("Applying update:", update);
-
-    content =
-      content.slice(0, update.span.start) +
-      update.newText +
-      content.slice(update.span.start + update.span.length);
-
-    // Update the spans of the following updates
-    for (const update2 of updates) {
-      if (update2.span.start > update.span.start) {
-        const offset = update.newText.length - update.span.length;
-
-        console.debug("Offsetting update:", offset, update2);
-
-        update2.span.start += offset;
-      }
-    }
-  }
-  updates.length = 0;
-
-  // Ensure that symbols to rename are cleared after
-  // two iterations (one partial + one full iteration)
-  for (const [key, value] of symbolsToRename) {
-    value[1]++;
-
-    if (value[1] >= 2) {
-      symbolsToRename.delete(key);
-    }
-  }
-
-  i++;
-}
 
 await Bun.write("out.js", content);
