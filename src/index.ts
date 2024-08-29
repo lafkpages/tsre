@@ -6,9 +6,17 @@ import { guessNewIdentifierName, saveCache } from "./ai";
 const inputFile = Bun.file("./src/test/dummy.js");
 let content = await inputFile.text();
 
-const renamed = new Set<string>();
+// For some reason, Prettier removes the <string>
+// type annotation from the Set, so we have to
+// prettier-ignore
+const renamed = new Map<number, Set<string>>();
 
 const maxFunctionLength = 500;
+
+interface PushData {
+  path: any;
+  newName: string;
+}
 
 ({ code: content } = putout(content, {
   plugins: [
@@ -19,20 +27,35 @@ const maxFunctionLength = 500;
           return "tsre";
         },
 
-        fix({ path, newName }) {
+        fix({ path, newName }: PushData) {
           const { name } = path.node;
           path.scope.rename(name, newName);
         },
 
-        traverse({ push }) {
+        traverse({ push: _push }: { push: (data: PushData) => void }) {
+          function push(data: PushData) {
+            _push(data);
+
+            let scopeRenamed = renamed.get(data.path.scope.uid);
+
+            if (!scopeRenamed) {
+              scopeRenamed = new Set();
+              renamed.set(data.path.scope.uid, scopeRenamed);
+            }
+
+            scopeRenamed.add(data.newName);
+          }
+
           return {
-            Identifier(path) {
+            Identifier(path: any) {
               const { name } = path.node;
               if (!path.scope.hasBinding(name)) {
                 return;
               }
 
-              if (renamed.has(name)) {
+              const scopeRenamed = renamed.get(path.scope.uid);
+
+              if (scopeRenamed?.has(name)) {
                 return;
               }
 
@@ -67,11 +90,14 @@ const maxFunctionLength = 500;
                     path,
                     newName: newFunctionName,
                   });
-                  renamed.add(newFunctionName);
                 } else {
                   console.log("Function declaration too long, skipping");
                 }
-              } else if (path.parent.type === "FunctionDeclaration") {
+
+                return;
+              }
+
+              if (path.parent.type === "FunctionDeclaration") {
                 if (path.listKey === "params") {
                   if (
                     path.parent.end - path.parent.start <=
@@ -101,14 +127,17 @@ const maxFunctionLength = 500;
                       path,
                       newName: newParameterName,
                     });
-                    renamed.add(newParameterName);
                   } else {
                     console.log(
                       "Function declaration for parameter too long, skipping",
                     );
                   }
+
+                  return;
                 }
               }
+
+              debugger;
             },
           };
         },
