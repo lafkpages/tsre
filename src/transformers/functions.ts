@@ -6,11 +6,10 @@ export default [
   {
     accepts(node) {
       return (
+        false &&
         isFunctionDeclaration(node) &&
         !!node.name &&
-        node.getFullWidth() <= 500 &&
-        // for debugging, hardcode LLM response and check if the function is the one we want to transform
-        node.name.getText() === "VYi"
+        node.getFullWidth() <= 500
       );
     },
     async transform(node: FunctionDeclaration) {
