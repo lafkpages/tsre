@@ -1,3 +1,6 @@
+import type { NodePath } from "@babel/traverse";
+import type { Identifier } from "@babel/types";
+
 import { format } from "prettier";
 import putout from "putout";
 
@@ -13,8 +16,11 @@ const renamed = new Map<number, Set<string>>();
 
 const maxFunctionLength = 500;
 
+// prettier-ignore
+type IdentifierNodePath = NodePath<Identifier>;
+
 interface PushData {
-  path: any;
+  path: IdentifierNodePath;
   newName: string;
 }
 
@@ -47,7 +53,7 @@ interface PushData {
           }
 
           return {
-            Identifier(path: any) {
+            Identifier(path: IdentifierNodePath) {
               const { name } = path.node;
               if (!path.scope.hasBinding(name)) {
                 return;
@@ -59,16 +65,26 @@ interface PushData {
                 return;
               }
 
-              console.log("Traversing identifier", name, path.container.type);
+              console.log("Traversing identifier:", name);
 
-              if (path.container.type === "FunctionDeclaration") {
+              const container =
+                !path.container || "length" in path.container
+                  ? null
+                  : path.container;
+
+              if (container?.type === "FunctionDeclaration") {
                 if (
-                  path.container.end - path.container.start <=
+                  typeof container.start !== "number" ||
+                  typeof container.end !== "number"
+                ) {
+                  return;
+                } else if (
+                  container.end - container.start <=
                   maxFunctionLength
                 ) {
                   const functionDeclarationText = content.slice(
-                    path.container.start,
-                    path.container.end,
+                    container.start,
+                    container.end,
                   );
 
                   console.log("Asking for new function name", {
@@ -100,6 +116,11 @@ interface PushData {
               if (path.parent.type === "FunctionDeclaration") {
                 if (path.listKey === "params") {
                   if (
+                    typeof path.parent.start !== "number" ||
+                    typeof path.parent.end !== "number"
+                  ) {
+                    return;
+                  } else if (
                     path.parent.end - path.parent.start <=
                     maxFunctionLength
                   ) {
