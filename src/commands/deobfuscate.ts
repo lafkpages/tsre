@@ -17,7 +17,7 @@ export default new Command("deobfuscate")
       .argParser(parseInt)
       .default(500),
   )
-  .option("--no-cache", "do not use cache", false)
+  .option("--no-cache", "do not use cache", true)
   .action(async (file: string, options) => {
     console.debug(options);
 
