@@ -26,8 +26,6 @@ export default new Command("deobfuscate")
     defaultAiOptions.supportsJsonSchema,
   )
   .action(async (file: string, options) => {
-    console.debug(options);
-
     const inputFile = Bun.file(file);
     const content = await inputFile.text();
 
