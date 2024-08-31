@@ -1,4 +1,4 @@
-import type { AIOptions } from "./proc";
+import type { ChatModel } from "openai/resources/index";
 
 import { join } from "node:path";
 
@@ -78,3 +78,14 @@ export function guessNewIdentifierName(
     `Failed to execute sync Bun process for getNewFunctionName (exit code ${proc.exitCode}):\n${proc.stderr.toString()}`,
   );
 }
+
+export interface AIOptions {
+  model?: (string & {}) | ChatModel;
+  supportsJsonSchema?: boolean;
+}
+
+// prettier-ignore
+export const defaultAiOptions: Required<AIOptions> = {
+  model: "gpt-4o-mini",
+  supportsJsonSchema: true,
+};

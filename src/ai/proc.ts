@@ -1,12 +1,11 @@
 import type { ChatCompletionMessageParam } from "openai/resources/index";
+import type { AIOptions } from ".";
 
 import OpenAI from "openai";
 
-export const openai = new OpenAI();
+import { defaultAiOptions } from ".";
 
-export interface AIOptions {
-  supportsJsonSchema?: boolean;
-}
+export const openai = new OpenAI();
 
 async function guessNewIdentifierNameAsync(
   usedBindings: string,
@@ -17,7 +16,7 @@ async function guessNewIdentifierNameAsync(
 ) {
   // prettier-ignore
   const options: Required<AIOptions> = {
-    supportsJsonSchema: true,
+   ...defaultAiOptions,
     ...opts,
   };
 
@@ -58,7 +57,7 @@ async function guessNewIdentifierNameAsync(
   });
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: options.model,
     messages,
     response_format: options.supportsJsonSchema
       ? {
