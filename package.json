@@ -1,5 +1,6 @@
 {
   "name": "@luisafk/tsre",
+  "version": "0.0.1",
   "module": "src/index.ts",
   "type": "module",
   "devDependencies": {
@@ -12,6 +13,8 @@
     "typescript": "^5.5.4"
   },
   "dependencies": {
+    "@commander-js/extra-typings": "^12.1.0",
+    "commander": "^12.1.0",
     "openai": "^4.56.1",
     "prettier": "^3.3.3",
     "putout": "^36.4.1"
