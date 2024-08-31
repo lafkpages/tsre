@@ -1,6 +1,7 @@
 /main.log
 /out.js
 /src/test/dummy.js
+/llama.log
 
 # Based on https://raw.githubusercontent.com/github/gitignore/main/Node.gitignore
 
