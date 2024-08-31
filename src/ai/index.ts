@@ -1,3 +1,5 @@
+import type { AIOptions } from "./proc";
+
 import { join } from "node:path";
 
 const cache = new Map<number, AIResult>();
@@ -40,6 +42,7 @@ export function guessNewIdentifierName(
   identifierType: string,
   data: string,
   context?: string,
+  opts?: AIOptions,
 ) {
   context ||= "";
 
@@ -59,6 +62,7 @@ export function guessNewIdentifierName(
       identifierType,
       data,
       context,
+      opts ? JSON.stringify(opts) : "{}",
     ],
   });
 

@@ -1,7 +1,8 @@
 import type { NodePath } from "@babel/traverse";
 import type { Identifier, VariableDeclarator } from "@babel/types";
 import type { AIResult } from "./ai";
-import type { ParametersButFirst } from "./types/helpers";
+import type { AIOptions } from "./ai/proc";
+import type { ParametersButFirstAndLast } from "./types/helpers";
 
 import {
   isArrayPattern,
@@ -16,6 +17,8 @@ import putout from "putout";
 import { guessNewIdentifierName as _guessNewIdentifierName } from "./ai";
 
 export interface DeobfuscateOptions {
+  aiOptions?: AIOptions;
+
   maxFunctionLength?: number;
 
   programContext?: string;
@@ -24,6 +27,8 @@ export interface DeobfuscateOptions {
 export async function deobfuscate(content: string, opts?: DeobfuscateOptions) {
   // prettier-ignore
   const options: Required<DeobfuscateOptions> = {
+    aiOptions: {},
+
     maxFunctionLength: 500,
 
     programContext: "",
@@ -94,10 +99,14 @@ export async function deobfuscate(content: string, opts?: DeobfuscateOptions) {
 
                 function guessNewIdentifierName(
                   ...args: // prettier-ignore
-                  ParametersButFirst<typeof _guessNewIdentifierName>
+                  ParametersButFirstAndLast<typeof _guessNewIdentifierName>
                 ) {
                   const bindings = Object.keys(path.scope.getAllBindings());
-                  return _guessNewIdentifierName(bindings, ...args);
+                  return _guessNewIdentifierName(
+                    bindings,
+                    ...args,
+                    options.aiOptions,
+                  );
                 }
 
                 console.log("Traversing identifier:", name);

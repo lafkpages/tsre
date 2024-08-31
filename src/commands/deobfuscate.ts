@@ -18,6 +18,11 @@ export default new Command("deobfuscate")
       .default(500),
   )
   .option("--no-cache", "do not use cache", true)
+  .option(
+    "--no-json-schema",
+    "do not use the json_schema response_format, some APIs, like llama-server, do not support it",
+    true,
+  )
   .action(async (file: string, options) => {
     console.debug(options);
 
@@ -25,6 +30,10 @@ export default new Command("deobfuscate")
     const content = await inputFile.text();
 
     const deobfuscated = await deobfuscate(content, {
+      aiOptions: {
+        supportsJsonSchema: options.jsonSchema,
+      },
+
       maxFunctionLength: options.maxFunctionLength,
     });
 

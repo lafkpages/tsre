@@ -4,12 +4,23 @@ import OpenAI from "openai";
 
 export const openai = new OpenAI();
 
+export interface AIOptions {
+  supportsJsonSchema?: boolean;
+}
+
 async function guessNewIdentifierNameAsync(
   usedBindings: string,
   identifierType: string,
   data: string,
   context?: string,
+  opts?: AIOptions,
 ) {
+  // prettier-ignore
+  const options: Required<AIOptions> = {
+    supportsJsonSchema: true,
+    ...opts,
+  };
+
   const messages: ChatCompletionMessageParam[] = [
     {
       role: "system",
@@ -26,6 +37,14 @@ async function guessNewIdentifierNameAsync(
     },
   ];
 
+  if (!options.supportsJsonSchema) {
+    messages.push({
+      role: "system",
+      content:
+        "Respond with a JSON object like { newName: string; additionalProgramContext?: string }",
+    });
+  }
+
   if (context) {
     messages.push({
       role: "user",
@@ -41,24 +60,28 @@ async function guessNewIdentifierNameAsync(
   const response = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages,
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "identifierNameResult",
-        schema: {
-          type: "object",
-          properties: {
-            newName: {
-              type: "string",
-            },
-            additionalProgramContext: {
-              type: "string",
+    response_format: options.supportsJsonSchema
+      ? {
+          type: "json_schema",
+          json_schema: {
+            name: "identifierNameResult",
+            schema: {
+              type: "object",
+              properties: {
+                newName: {
+                  type: "string",
+                },
+                additionalProgramContext: {
+                  type: "string",
+                },
+              },
+              required: ["newName"],
             },
           },
-          required: ["newName"],
+        }
+      : {
+          type: "json_object",
         },
-      },
-    },
   });
 
   const content = response.choices?.[0].message.content;
@@ -76,6 +99,7 @@ if (import.meta.main) {
   const identifierType = process.argv[3];
   const data = process.argv[4];
   const context = process.argv[5];
+  const opts = JSON.parse(process.argv[6]) as AIOptions;
 
   if (!identifierType || identifierType.length <= 1) {
     throw new Error("Invalid identifier type");
@@ -91,6 +115,7 @@ if (import.meta.main) {
       identifierType,
       data,
       context,
+      opts,
     ),
   );
 }
