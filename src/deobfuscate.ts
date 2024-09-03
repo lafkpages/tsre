@@ -5,6 +5,7 @@ import type { ParametersButFirst } from "./types/helpers";
 
 import {
   isArrayPattern,
+  isClassDeclaration,
   isForOfStatement,
   isFunctionDeclaration,
   isVariableDeclaration,
@@ -294,6 +295,40 @@ export async function deobfuscate(
 
                     return;
                   }
+                }
+
+                if (
+                  isClassDeclaration(path.parent) &&
+                  typeof path.parent.start === "number" &&
+                  path.parent.end
+                ) {
+                  const classDeclarationText = content.slice(
+                    path.parent.start,
+                    path.parent.end,
+                  );
+
+                  console.log("Asking for new class name", {
+                    name,
+                    classDeclarationText,
+                  });
+
+                  const aiResult = guessNewIdentifierName(
+                    "class",
+                    classDeclarationText,
+                    programContext,
+                  );
+
+                  console.log("Got new class name:", {
+                    name,
+                    aiResult,
+                  });
+
+                  push({
+                    path,
+                    aiResult,
+                  });
+
+                  return;
                 }
 
                 debugger;
