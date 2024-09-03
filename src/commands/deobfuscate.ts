@@ -5,6 +5,7 @@ import format from "string-template";
 
 import {
   guessNewIdentifierName as _guessNewIdentifierName,
+  loadCache,
   saveCache,
 } from "../ai";
 import { defaultAiOptions } from "../ai/common";
@@ -35,6 +36,10 @@ export default new Command("deobfuscate")
   .action(async (file: string, options) => {
     const inputFile = Bun.file(file);
     const content = await inputFile.text();
+
+    await loadCache().catch((err) => {
+      console.warn("Failed to load cache:", err);
+    });
 
     const deobfuscated = await deobfuscate(content, {
       aiOptions: {

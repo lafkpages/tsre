@@ -8,14 +8,12 @@ const cacheFile = Bun.file("./.cache/ai.json");
 // prettier-ignore
 type CacheData = Record<string, AIResult>;
 
-try {
+export async function loadCache() {
   const cacheData = (await cacheFile.json()) as CacheData;
 
   for (const [key, value] of Object.entries(cacheData)) {
     cache.set(parseInt(key), value);
   }
-} catch (error) {
-  console.error("Failed to load cache", error);
 }
 
 export async function saveCache() {
