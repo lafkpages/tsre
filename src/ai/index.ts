@@ -3,31 +3,107 @@ import type { AIOptions } from "./common";
 
 import { join } from "node:path";
 
-const cache = new Map<number, AIResult>();
+import { defaultAiOptions } from "./common";
 
 // prettier-ignore
 type CacheData = Record<string, AIResult>;
+// prettier-ignore
+type RequiredAIOptions = Required<AIOptions>;
 
-export async function loadAiCache(file: BunFile) {
-  const cacheData = (await file.json()) as CacheData;
+export class AI {
+  model;
+  supportsJsonSchema;
 
-  for (const [key, value] of Object.entries(cacheData)) {
-    cache.set(parseInt(key), value);
+  cache;
+
+  constructor(
+    opts: AIOptions & {
+      cache?: AICache | null;
+    },
+  ) {
+    this.model = opts.model || defaultAiOptions.model;
+    this.supportsJsonSchema =
+      opts.supportsJsonSchema ?? defaultAiOptions.supportsJsonSchema;
+
+    this.cache = opts.cache;
+  }
+
+  guessNewIdentifierName(
+    usedBindings: string[],
+    identifierType: string,
+    data: string,
+    context?: string,
+  ) {
+    context ||= "";
+
+    let cacheHash: number;
+    if (this.cache) {
+      cacheHash = getCacheHash(identifierType, data, context);
+      const cached = this.cache.cacheData.get(cacheHash);
+
+      if (cached) {
+        return cached;
+      }
+    }
+
+    const proc = Bun.spawnSync({
+      cmd: [
+        process.execPath,
+        "run",
+        join(__dirname, "proc.ts"),
+        "--",
+        usedBindings.join(","),
+        identifierType,
+        data,
+        JSON.stringify({
+          model: this.model,
+          supportsJsonSchema: this.supportsJsonSchema,
+        } satisfies RequiredAIOptions),
+        context,
+      ],
+    });
+
+    if (proc.success) {
+      const result = JSON.parse(proc.stdout.toString()) as AIResult;
+
+      if (this.cache) {
+        this.cache.cacheData.set(cacheHash!, result);
+      }
+
+      return result;
+    }
+
+    throw new Error(
+      `Failed to execute sync Bun process for getNewFunctionName (exit code ${proc.exitCode}):\n${proc.stderr.toString()}`,
+    );
   }
 }
 
-export async function saveAiCache(file: BunFile) {
-  const cacheData: CacheData = {};
+export class AICache {
+  cacheData = new Map<number, AIResult>();
+  private cacheFile;
 
-  for (const [key, value] of cache) {
-    cacheData[key] = value;
+  constructor(cacheFile: BunFile) {
+    this.cacheFile = cacheFile;
   }
 
-  await Bun.write(file, JSON.stringify(cacheData));
-}
+  async load() {
+    const cacheData = (await this.cacheFile.json()) as CacheData;
 
-function getCacheHash(identifierType: string, data: string, context: string) {
-  return Bun.hash.adler32(`${identifierType}:${data}:${context}`);
+    for (const [key, value] of Object.entries(cacheData)) {
+      this.cacheData.set(parseInt(key), value);
+    }
+  }
+
+  async save() {
+    const cacheData: CacheData = {};
+
+    for (const [key, value] of this.cacheData) {
+      cacheData[key] = value;
+    }
+
+    await Bun.write(this.cacheFile, JSON.stringify(cacheData));
+  }
 }
 
 export interface AIResult {
@@ -35,44 +111,6 @@ export interface AIResult {
   additionalProgramContext?: string;
 }
 
-export function guessNewIdentifierName(
-  usedBindings: string[],
-  identifierType: string,
-  data: string,
-  context?: string,
-  opts?: AIOptions,
-) {
-  context ||= "";
-
-  const cacheHash = getCacheHash(identifierType, data, context);
-  const cached = cache.get(cacheHash);
-  if (cached) {
-    return cached;
-  }
-
-  const proc = Bun.spawnSync({
-    cmd: [
-      process.execPath,
-      "run",
-      join(__dirname, "proc.ts"),
-      "--",
-      usedBindings.join(","),
-      identifierType,
-      data,
-      opts ? JSON.stringify(opts) : "{}",
-      context,
-    ],
-  });
-
-  if (proc.success) {
-    const result = JSON.parse(proc.stdout.toString()) as AIResult;
-
-    cache.set(cacheHash, result);
-
-    return result;
-  }
-
-  throw new Error(
-    `Failed to execute sync Bun process for getNewFunctionName (exit code ${proc.exitCode}):\n${proc.stderr.toString()}`,
-  );
+function getCacheHash(identifierType: string, data: string, context: string) {
+  return Bun.hash.adler32(`${identifierType}:${data}:${context}`);
 }

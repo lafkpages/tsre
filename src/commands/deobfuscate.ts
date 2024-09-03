@@ -1,15 +1,9 @@
-import type { BunFile } from "bun";
-
 import { basename } from "node:path";
 
 import { Command, Option } from "@commander-js/extra-typings";
 import format from "string-template";
 
-import {
-  guessNewIdentifierName as _guessNewIdentifierName,
-  loadAiCache,
-  saveAiCache,
-} from "../ai";
+import { AI, AICache } from "../ai";
 import { defaultAiOptions } from "../ai/common";
 import { deobfuscate } from "../deobfuscate";
 
@@ -49,20 +43,23 @@ export default new Command("deobfuscate")
       const inputFile = Bun.file(inputFilePath);
       const inputContent = await inputFile.text();
 
-      let cacheFile: BunFile;
-      if (useCache) {
-        cacheFile = Bun.file(`./.cache/${model}/ai.json`);
+      let aiCache: AICache | null = null;
 
-        await loadAiCache(cacheFile).catch((err) => {
+      if (useCache) {
+        aiCache = new AICache(Bun.file(`./.cache/${model}/ai.json`));
+
+        await aiCache.load().catch((err) => {
           console.warn("Failed to load cache:", err);
         });
       }
 
-      const deobfuscated = await deobfuscate(inputContent, {
-        aiOptions: {
-          supportsJsonSchema,
-        },
+      const ai = new AI({
+        model,
+        supportsJsonSchema,
+        cache: aiCache,
+      });
 
+      const deobfuscated = await deobfuscate(inputContent, ai, {
         maxFunctionLength: maxFunctionLength,
       });
 
@@ -92,8 +89,6 @@ export default new Command("deobfuscate")
         await Bun.write(outputFilePath, deobfuscated.content);
       }
 
-      if (useCache) {
-        await saveAiCache(cacheFile!);
-      }
+      await aiCache?.save();
     },
   );

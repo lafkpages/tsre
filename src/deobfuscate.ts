@@ -1,8 +1,7 @@
 import type { NodePath } from "@babel/traverse";
 import type { Identifier, VariableDeclarator } from "@babel/types";
-import type { AIResult } from "./ai";
-import type { AIOptions } from "./ai/proc";
-import type { ParametersButFirstAndLast } from "./types/helpers";
+import type { AI, AIResult } from "./ai";
+import type { ParametersButFirst } from "./types/helpers";
 
 import {
   isArrayPattern,
@@ -12,22 +11,23 @@ import {
   isVariableDeclarator,
 } from "@babel/types";
 import { format } from "prettier";
+// @ts-expect-error
 import putout from "putout";
 
-import { guessNewIdentifierName as _guessNewIdentifierName } from "./ai";
-
 export interface DeobfuscateOptions {
-  aiOptions?: AIOptions;
-
   maxFunctionLength?: number;
 
   programContext?: string;
 }
 
-export async function deobfuscate(content: string, opts?: DeobfuscateOptions) {
+export async function deobfuscate(
+  content: string,
+  ai: AI,
+  opts?: DeobfuscateOptions,
+) {
   // prettier-ignore
   const options: Required<DeobfuscateOptions> = {
-    aiOptions: {},
+    
 
     maxFunctionLength: 500,
 
@@ -99,14 +99,10 @@ export async function deobfuscate(content: string, opts?: DeobfuscateOptions) {
 
                 function guessNewIdentifierName(
                   ...args: // prettier-ignore
-                  ParametersButFirstAndLast<typeof _guessNewIdentifierName>
+                  ParametersButFirst<typeof ai.guessNewIdentifierName>
                 ) {
                   const bindings = Object.keys(path.scope.getAllBindings());
-                  return _guessNewIdentifierName(
-                    bindings,
-                    ...args,
-                    options.aiOptions,
-                  );
+                  return ai.guessNewIdentifierName(bindings, ...args);
                 }
 
                 console.log("Traversing identifier:", name);
