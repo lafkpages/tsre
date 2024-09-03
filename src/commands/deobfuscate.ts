@@ -1,4 +1,7 @@
+import { basename } from "node:path";
+
 import { Command, Option } from "@commander-js/extra-typings";
+import format from "string-template";
 
 import {
   guessNewIdentifierName as _guessNewIdentifierName,
@@ -9,7 +12,11 @@ import { deobfuscate } from "../deobfuscate";
 
 export default new Command("deobfuscate")
   .arguments("<file>")
-  .option("-o, --output <file>", "output file", "-")
+  .option(
+    "-o, --output <file>",
+    "output file. Templates like {filename}, {hash} and {model} can be used",
+    "-",
+  )
   .addOption(
     new Option(
       "--max-function-length <number>",
@@ -40,7 +47,27 @@ export default new Command("deobfuscate")
     if (options.output === "-") {
       console.log(deobfuscated.content);
     } else {
-      await Bun.write(options.output, deobfuscated.content);
+      const output = format(
+        options.output,
+        Object.defineProperties(
+          {},
+          {
+            filename: {
+              get() {
+                return basename(file);
+              },
+            },
+            hash: {
+              get() {
+                return Bun.hash(content).toString(36);
+              },
+            },
+            model: { value: options.model },
+          },
+        ),
+      );
+
+      await Bun.write(output, deobfuscated.content);
     }
 
     if (options.cache) {
