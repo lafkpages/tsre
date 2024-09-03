@@ -65,6 +65,13 @@ export async function deobfuscate(
           },
 
           fix({ path, aiResult }: PushData) {
+            if (path.scope.hasBinding(aiResult.newName)) {
+              console.warn(
+                `Scope already has binding for "${aiResult.newName}", skipping`,
+              );
+              return;
+            }
+
             const { name } = path.node;
             path.scope.rename(name, aiResult.newName);
           },
