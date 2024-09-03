@@ -2,9 +2,9 @@ import { Command, Option } from "@commander-js/extra-typings";
 
 import {
   guessNewIdentifierName as _guessNewIdentifierName,
-  defaultAiOptions,
   saveCache,
 } from "../ai";
+import { defaultAiOptions } from "../ai/common";
 import { deobfuscate } from "../deobfuscate";
 
 export default new Command("deobfuscate")

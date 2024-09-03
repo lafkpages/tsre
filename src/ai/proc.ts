@@ -1,9 +1,9 @@
 import type { ChatCompletionMessageParam } from "openai/resources/index";
-import type { AIOptions } from ".";
+import type { AIOptions } from "./common";
 
 import OpenAI from "openai";
 
-import { defaultAiOptions } from ".";
+import { defaultAiOptions } from "./common";
 
 export const openai = new OpenAI();
 
@@ -97,8 +97,8 @@ if (import.meta.main) {
   const usedBindings = process.argv[2];
   const identifierType = process.argv[3];
   const data = process.argv[4];
-  const context = process.argv[5];
-  const opts = JSON.parse(process.argv[6]) as AIOptions;
+  const context = process.argv[6];
+  const opts = JSON.parse(process.argv[5]) as AIOptions;
 
   if (!identifierType || identifierType.length <= 1) {
     throw new Error("Invalid identifier type");
