@@ -1,12 +1,12 @@
-import type { ChatModel } from "openai/resources/index";
+import type { AICache } from ".";
+import type { AIProcOptions } from "./proc";
 
-export interface AIOptions {
-  model?: (string & {}) | ChatModel;
-  supportsJsonSchema?: boolean;
+export interface AIOptions extends AIProcOptions {
+  cache?: AICache | null;
 }
 
 // prettier-ignore
-export const defaultAiOptions: Required<AIOptions> = {
+export const defaultAiProcOptions: Required<AIProcOptions> = {
   model: "gpt-4o-mini",
   supportsJsonSchema: true,
 };

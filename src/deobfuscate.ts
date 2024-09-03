@@ -18,6 +18,8 @@ export interface DeobfuscateOptions {
   maxFunctionLength?: number;
 
   programContext?: string;
+
+  saveCacheOnAIGuess?: boolean;
 }
 
 export async function deobfuscate(
@@ -32,6 +34,8 @@ export async function deobfuscate(
     maxFunctionLength: 500,
 
     programContext: "",
+
+    saveCacheOnAIGuess: true,
 
     ...opts,
   };
@@ -102,7 +106,13 @@ export async function deobfuscate(
                   ParametersButFirst<typeof ai.guessNewIdentifierName>
                 ) {
                   const bindings = Object.keys(path.scope.getAllBindings());
-                  return ai.guessNewIdentifierName(bindings, ...args);
+                  const result = ai.guessNewIdentifierName(bindings, ...args);
+
+                  if (options.saveCacheOnAIGuess && !result.cacheHit) {
+                    ai.cache?.save();
+                  }
+
+                  return result;
                 }
 
                 console.log("Traversing identifier:", name);

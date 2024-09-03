@@ -4,7 +4,7 @@ import { Command, Option } from "@commander-js/extra-typings";
 import format from "string-template";
 
 import { AI, AICache } from "../ai";
-import { defaultAiOptions } from "../ai/common";
+import { defaultAiProcOptions } from "../ai/common";
 import { deobfuscate } from "../deobfuscate";
 
 export default new Command("deobfuscate")
@@ -22,12 +22,12 @@ export default new Command("deobfuscate")
       .argParser(parseInt)
       .default(500),
   )
-  .option("-m, --model <model>", "AI model to use", defaultAiOptions.model)
+  .option("-m, --model <model>", "AI model to use", defaultAiProcOptions.model)
   .option("--no-cache", "do not use cache", true)
   .option(
     "--no-json-schema",
     "do not use the json_schema response_format, some APIs, like llama-server, do not support it",
-    defaultAiOptions.supportsJsonSchema,
+    defaultAiProcOptions.supportsJsonSchema,
   )
   .action(
     async (

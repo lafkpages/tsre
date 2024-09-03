@@ -1,9 +1,11 @@
-import type { ChatCompletionMessageParam } from "openai/resources/index";
-import type { AIOptions } from "./common";
+import type {
+  ChatCompletionMessageParam,
+  ChatModel,
+} from "openai/resources/index";
 
 import OpenAI from "openai";
 
-import { defaultAiOptions } from "./common";
+import { defaultAiProcOptions } from "./common";
 
 export const openai = new OpenAI();
 
@@ -12,11 +14,11 @@ async function guessNewIdentifierNameAsync(
   identifierType: string,
   data: string,
   context?: string,
-  opts?: AIOptions,
+  opts?: AIProcOptions,
 ) {
   // prettier-ignore
-  const options: Required<AIOptions> = {
-   ...defaultAiOptions,
+  const options: Required<AIProcOptions> = {
+   ...defaultAiProcOptions,
     ...opts,
   };
 
@@ -98,7 +100,7 @@ if (import.meta.main) {
   const identifierType = process.argv[3];
   const data = process.argv[4];
   const context = process.argv[6];
-  const opts = JSON.parse(process.argv[5]) as AIOptions;
+  const opts = JSON.parse(process.argv[5]) as AIProcOptions;
 
   if (!identifierType || identifierType.length <= 1) {
     throw new Error("Invalid identifier type");
@@ -117,4 +119,9 @@ if (import.meta.main) {
       opts,
     ),
   );
+}
+
+export interface AIProcOptions {
+  model?: (string & {}) | ChatModel;
+  supportsJsonSchema?: boolean;
 }

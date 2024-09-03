@@ -1,14 +1,15 @@
 import type { BunFile } from "bun";
 import type { AIOptions } from "./common";
+import type { AIProcOptions } from "./proc";
 
 import { join } from "node:path";
 
-import { defaultAiOptions } from "./common";
+import { defaultAiProcOptions } from "./common";
 
 // prettier-ignore
 type CacheData = Record<string, AIResult>;
 // prettier-ignore
-type RequiredAIOptions = Required<AIOptions>;
+type RequiredAIProcOptions = Required<AIProcOptions>;
 
 export class AI {
   model;
@@ -16,14 +17,10 @@ export class AI {
 
   cache;
 
-  constructor(
-    opts: AIOptions & {
-      cache?: AICache | null;
-    },
-  ) {
-    this.model = opts.model || defaultAiOptions.model;
+  constructor(opts: AIOptions) {
+    this.model = opts.model || defaultAiProcOptions.model;
     this.supportsJsonSchema =
-      opts.supportsJsonSchema ?? defaultAiOptions.supportsJsonSchema;
+      opts.supportsJsonSchema ?? defaultAiProcOptions.supportsJsonSchema;
 
     this.cache = opts.cache;
   }
@@ -42,7 +39,10 @@ export class AI {
       const cached = this.cache.cacheData.get(cacheHash);
 
       if (cached) {
-        return cached;
+        return {
+          ...cached,
+          cacheHit: true,
+        };
       }
     }
 
@@ -58,7 +58,7 @@ export class AI {
         JSON.stringify({
           model: this.model,
           supportsJsonSchema: this.supportsJsonSchema,
-        } satisfies RequiredAIOptions),
+        } satisfies RequiredAIProcOptions),
         context,
       ],
     });
@@ -70,7 +70,10 @@ export class AI {
         this.cache.cacheData.set(cacheHash!, result);
       }
 
-      return result;
+      return {
+        ...result,
+        cacheHit: false,
+      };
     }
 
     throw new Error(
@@ -96,6 +99,8 @@ export class AICache {
   }
 
   async save() {
+    console.debug("Saving AI cache");
+
     const cacheData: CacheData = {};
 
     for (const [key, value] of this.cacheData) {
