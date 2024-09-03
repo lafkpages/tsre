@@ -1,3 +1,5 @@
+import type { BunFile } from "bun";
+
 import { basename } from "node:path";
 
 import { Command, Option } from "@commander-js/extra-typings";
@@ -5,8 +7,8 @@ import format from "string-template";
 
 import {
   guessNewIdentifierName as _guessNewIdentifierName,
-  loadCache,
-  saveCache,
+  loadAiCache,
+  saveAiCache,
 } from "../ai";
 import { defaultAiOptions } from "../ai/common";
 import { deobfuscate } from "../deobfuscate";
@@ -33,49 +35,65 @@ export default new Command("deobfuscate")
     "do not use the json_schema response_format, some APIs, like llama-server, do not support it",
     defaultAiOptions.supportsJsonSchema,
   )
-  .action(async (file: string, options) => {
-    const inputFile = Bun.file(file);
-    const content = await inputFile.text();
-
-    await loadCache().catch((err) => {
-      console.warn("Failed to load cache:", err);
-    });
-
-    const deobfuscated = await deobfuscate(content, {
-      aiOptions: {
-        supportsJsonSchema: options.jsonSchema,
+  .action(
+    async (
+      inputFilePath: string,
+      {
+        model,
+        jsonSchema: supportsJsonSchema,
+        maxFunctionLength,
+        output: outputFilePath,
+        cache: useCache,
       },
+    ) => {
+      const inputFile = Bun.file(inputFilePath);
+      const inputContent = await inputFile.text();
 
-      maxFunctionLength: options.maxFunctionLength,
-    });
+      let cacheFile: BunFile;
+      if (useCache) {
+        cacheFile = Bun.file(`./.cache/${model}/ai.json`);
 
-    if (options.output === "-") {
-      console.log(deobfuscated.content);
-    } else {
-      const output = format(
-        options.output,
-        Object.defineProperties(
-          {},
-          {
-            filename: {
-              get() {
-                return basename(file);
+        await loadAiCache(cacheFile).catch((err) => {
+          console.warn("Failed to load cache:", err);
+        });
+      }
+
+      const deobfuscated = await deobfuscate(inputContent, {
+        aiOptions: {
+          supportsJsonSchema,
+        },
+
+        maxFunctionLength: maxFunctionLength,
+      });
+
+      if (outputFilePath === "-") {
+        console.log(deobfuscated.content);
+      } else {
+        outputFilePath = format(
+          outputFilePath,
+          Object.defineProperties(
+            {},
+            {
+              filename: {
+                get() {
+                  return basename(inputFilePath);
+                },
               },
-            },
-            hash: {
-              get() {
-                return Bun.hash(content).toString(36);
+              hash: {
+                get() {
+                  return Bun.hash(inputContent).toString(36);
+                },
               },
+              model: { value: model },
             },
-            model: { value: options.model },
-          },
-        ),
-      );
+          ),
+        );
 
-      await Bun.write(output, deobfuscated.content);
-    }
+        await Bun.write(outputFilePath, deobfuscated.content);
+      }
 
-    if (options.cache) {
-      await saveCache();
-    }
-  });
+      if (useCache) {
+        await saveAiCache(cacheFile!);
+      }
+    },
+  );

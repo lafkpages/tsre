@@ -1,29 +1,29 @@
+import type { BunFile } from "bun";
 import type { AIOptions } from "./common";
 
 import { join } from "node:path";
 
 const cache = new Map<number, AIResult>();
-const cacheFile = Bun.file("./.cache/ai.json");
 
 // prettier-ignore
 type CacheData = Record<string, AIResult>;
 
-export async function loadCache() {
-  const cacheData = (await cacheFile.json()) as CacheData;
+export async function loadAiCache(file: BunFile) {
+  const cacheData = (await file.json()) as CacheData;
 
   for (const [key, value] of Object.entries(cacheData)) {
     cache.set(parseInt(key), value);
   }
 }
 
-export async function saveCache() {
+export async function saveAiCache(file: BunFile) {
   const cacheData: CacheData = {};
 
   for (const [key, value] of cache) {
     cacheData[key] = value;
   }
 
-  await Bun.write(cacheFile, JSON.stringify(cacheData));
+  await Bun.write(file, JSON.stringify(cacheData));
 }
 
 function getCacheHash(identifierType: string, data: string, context: string) {
