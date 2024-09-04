@@ -96,6 +96,8 @@ export default new Command("deobfuscate")
         );
 
         await Bun.write(outputFilePath, deobfuscated.content);
+
+        console.log("Deobfuscated content saved to:", outputFilePath);
       }
 
       await aiCache?.save();
