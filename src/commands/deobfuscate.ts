@@ -95,7 +95,12 @@ export default new Command("deobfuscate")
               },
               model: { value: model },
               context: {
-                value: programContext === false ? "no-context" : "context",
+                value:
+                  programContext === false
+                    ? "no-context"
+                    : programContext
+                      ? "context-custom"
+                      : "context-auto",
               },
             },
           ),
