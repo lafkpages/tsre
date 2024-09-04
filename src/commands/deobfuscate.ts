@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 
 import { Command, Option } from "@commander-js/extra-typings";
+import consola from "consola";
 import format from "string-template";
 
 import { AI, AICache } from "../ai";
@@ -54,7 +55,7 @@ export default new Command("deobfuscate")
         aiCache = new AICache(Bun.file(`./.cache/${model}/ai.json`));
 
         await aiCache.load().catch((err) => {
-          console.warn("Failed to load cache:", err);
+          consola.warn("Failed to load cache:", err);
         });
       }
 
@@ -70,7 +71,7 @@ export default new Command("deobfuscate")
       });
 
       if (outputFilePath === "-") {
-        console.log(deobfuscated.content);
+        consola.log(deobfuscated.content);
       } else {
         outputFilePath = format(
           outputFilePath,
@@ -97,7 +98,7 @@ export default new Command("deobfuscate")
 
         await Bun.write(outputFilePath, deobfuscated.content);
 
-        console.log("Deobfuscated content saved to:", outputFilePath);
+        consola.success("Deobfuscated content saved to:", outputFilePath);
       }
 
       await aiCache?.save();

@@ -11,6 +11,7 @@ import {
   isVariableDeclaration,
   isVariableDeclarator,
 } from "@babel/types";
+import consola from "consola";
 import { format } from "prettier";
 // @ts-expect-error
 import putout from "putout";
@@ -29,9 +30,9 @@ export async function deobfuscate(
   opts?: DeobfuscateOptions,
 ) {
   // prettier-ignore
-  const options: Required<DeobfuscateOptions> = {
-    
-
+  const options: Required<DeobfuscateOptions> =
+        {
+     
     maxFunctionLength: 500,
 
     programContext: "",
@@ -67,7 +68,7 @@ export async function deobfuscate(
 
           fix({ path, aiResult }: PushData) {
             if (path.scope.hasBinding(aiResult.newName)) {
-              console.warn(
+              consola.warn(
                 `Scope already has binding for "${aiResult.newName}", skipping`,
               );
               return;
@@ -126,7 +127,7 @@ export async function deobfuscate(
                   return result;
                 }
 
-                console.log("Traversing identifier:", name);
+                consola.debug("Traversing identifier:", name);
 
                 const container =
                   !path.container || "length" in path.container
@@ -148,7 +149,7 @@ export async function deobfuscate(
                       container.end,
                     );
 
-                    console.log("Asking for new function name", {
+                    consola.debug("Asking for new function name", {
                       name,
                       functionDeclarationText,
                     });
@@ -159,7 +160,7 @@ export async function deobfuscate(
                       programContext,
                     );
 
-                    console.log("Got new function name:", {
+                    consola.debug("Got new function name:", {
                       name,
                       aiResult,
                     });
@@ -169,7 +170,7 @@ export async function deobfuscate(
                       aiResult,
                     });
                   } else {
-                    console.log("Function declaration too long, skipping");
+                    consola.warn("Function declaration too long, skipping");
                   }
 
                   return;
@@ -191,7 +192,7 @@ export async function deobfuscate(
                         path.parent.end,
                       );
 
-                      console.log("Asking for new parameter name", {
+                      consola.debug("Asking for new parameter name", {
                         name,
                         functionDeclarationText,
                       });
@@ -202,7 +203,7 @@ export async function deobfuscate(
                         programContext,
                       );
 
-                      console.log("Got new parameter name:", {
+                      consola.debug("Got new parameter name:", {
                         name,
                         aiResult,
                       });
@@ -212,7 +213,7 @@ export async function deobfuscate(
                         aiResult,
                       });
                     } else {
-                      console.log(
+                      consola.warn(
                         "Function declaration for parameter too long, skipping",
                       );
                     }
@@ -272,7 +273,7 @@ export async function deobfuscate(
                     if (declarationText) {
                       declarationText = `/* rename variable "${name}" */\n${declarationText}`;
 
-                      console.log("Asking for new variable name", {
+                      consola.debug("Asking for new variable name", {
                         name,
                         declarationText,
                       });
@@ -283,7 +284,7 @@ export async function deobfuscate(
                         programContext,
                       );
 
-                      console.log("Got new variable name:", {
+                      consola.debug("Got new variable name:", {
                         name,
                         aiResult,
                       });
@@ -293,7 +294,7 @@ export async function deobfuscate(
                         aiResult,
                       });
                     } else {
-                      console.log("Variable declaration type not supported");
+                      consola.warn("Variable declaration type not supported");
                     }
 
                     return;
@@ -310,7 +311,7 @@ export async function deobfuscate(
                     path.parent.end,
                   );
 
-                  console.log("Asking for new class name", {
+                  consola.debug("Asking for new class name", {
                     name,
                     classDeclarationText,
                   });
@@ -321,7 +322,7 @@ export async function deobfuscate(
                     programContext,
                   );
 
-                  console.log("Got new class name:", {
+                  consola.debug("Got new class name:", {
                     name,
                     aiResult,
                   });

@@ -4,6 +4,8 @@ import type { AIProcOptions } from "./proc";
 
 import { join } from "node:path";
 
+import consola from "consola";
+
 import { defaultAiProcOptions } from "./common";
 
 // prettier-ignore
@@ -99,7 +101,7 @@ export class AICache {
   }
 
   async save() {
-    console.debug("Saving AI cache");
+    consola.debug("Saving AI cache");
 
     const cacheData: CacheData = {};
 

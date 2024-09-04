@@ -16,6 +16,7 @@
   "dependencies": {
     "@commander-js/extra-typings": "^12.1.0",
     "commander": "^12.1.0",
+    "consola": "^3.2.3",
     "openai": "^4.57.1",
     "prettier": "^3.3.3",
     "putout": "^36.4.2",
