@@ -30,6 +30,7 @@ export default new Command("deobfuscate")
     "do not use the json_schema response_format, some APIs, like llama-server, do not support it",
     defaultAiProcOptions.supportsJsonSchema,
   )
+  .option("--program-context <context>", "program context to give to the AI")
   .option(
     "--no-program-context",
     "do not generate and provide program context to the AI",
@@ -43,9 +44,13 @@ export default new Command("deobfuscate")
         maxFunctionLength,
         output: outputFilePath,
         cache: useCache,
-        programContext: useProgramContext,
+        programContext,
       },
     ) => {
+      if (programContext !== false && programContext) {
+        programContext += "\n";
+      }
+
       const inputFile = Bun.file(inputFilePath);
       const inputContent = await inputFile.text();
 
@@ -67,7 +72,7 @@ export default new Command("deobfuscate")
 
       const deobfuscated = await deobfuscate(inputContent, ai, {
         maxFunctionLength: maxFunctionLength,
-        programContext: useProgramContext ? "" : false,
+        programContext,
       });
 
       if (outputFilePath === "-") {
@@ -90,7 +95,7 @@ export default new Command("deobfuscate")
               },
               model: { value: model },
               context: {
-                value: useProgramContext ? "context" : "no-context",
+                value: programContext === false ? "no-context" : "context",
               },
             },
           ),
