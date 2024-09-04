@@ -11,7 +11,7 @@ import {
   isVariableDeclaration,
   isVariableDeclarator,
 } from "@babel/types";
-import consola from "consola";
+import { consola } from "consola";
 import { format } from "prettier";
 // @ts-expect-error
 import putout from "putout";

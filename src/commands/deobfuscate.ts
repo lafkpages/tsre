@@ -1,7 +1,7 @@
 import { basename } from "node:path";
 
 import { Command, Option } from "@commander-js/extra-typings";
-import consola from "consola";
+import { consola } from "consola";
 import format from "string-template";
 
 import { AI, AICache } from "../ai";

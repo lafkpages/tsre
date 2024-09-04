@@ -4,7 +4,7 @@ import type { AIProcOptions } from "./proc";
 
 import { join } from "node:path";
 
-import consola from "consola";
+import { consola } from "consola";
 
 import { defaultAiProcOptions } from "./common";
 
