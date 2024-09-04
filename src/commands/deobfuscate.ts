@@ -73,6 +73,8 @@ export default new Command("deobfuscate")
         cache: aiCache,
       });
 
+      consola.start("Deobfuscating...");
+
       const deobfuscated = await deobfuscate(inputContent, ai, {
         maxFunctionLength: maxFunctionLength,
         programContext: useProgramContext ? customProgramContext : false,
