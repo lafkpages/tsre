@@ -14,7 +14,7 @@ import {
 import { consola } from "consola";
 import { format } from "prettier";
 // @ts-expect-error
-import putout from "putout";
+import { putoutAsync } from "putout";
 
 export interface DeobfuscateOptions {
   maxFunctionLength?: number;
@@ -43,12 +43,13 @@ export async function deobfuscate(
 
   interface PushData {
     path: NodePath<Identifier>;
-    aiResult: AIResult;
+    identifierType: string;
+    data: string;
   }
 
   let programContext = options.programContext;
 
-  ({ code: content } = putout(content, {
+  ({ code: content } = await putoutAsync(content, {
     plugins: [
       [
         "tsre",
@@ -57,7 +58,26 @@ export async function deobfuscate(
             return "tsre";
           },
 
-          fix({ path, aiResult }: PushData) {
+          async fix({ path, identifierType, data }: PushData) {
+            const { name } = path.node;
+
+            consola.debug("Guessing new identifier name:", {
+              name,
+              identifierType,
+              data,
+            });
+
+            const aiResult = await ai.guessNewIdentifierName(
+              Object.keys(path.scope.getAllBindings()),
+              identifierType,
+              data,
+              programContext,
+            );
+
+            if (options.saveCacheOnAIGuess && !aiResult.cacheHit) {
+              ai.cache?.save();
+            }
+
             if (path.scope.hasBinding(aiResult.newName)) {
               consola.warn(
                 `Scope already has binding for "${aiResult.newName}", skipping`,
@@ -65,32 +85,34 @@ export async function deobfuscate(
               return;
             }
 
-            const { name } = path.node;
+            consola.debug("Renaming identifier:", {
+              oldName: name,
+              newName: aiResult.newName,
+            });
+
             path.scope.rename(name, aiResult.newName);
-          },
 
-          traverse({ push: _push }: { push: (data: PushData) => void }) {
-            function push(data: PushData) {
-              _push(data);
+            let scopeRenamed = renamed.get(path.scope.uid);
 
-              let scopeRenamed = renamed.get(data.path.scope.uid);
-
-              if (!scopeRenamed) {
-                scopeRenamed = new Set();
-                renamed.set(data.path.scope.uid, scopeRenamed);
-              }
-
-              scopeRenamed.add(data.aiResult.newName);
-
-              if (
-                programContext !== false &&
-                data.aiResult.additionalProgramContext
-              ) {
-                programContext += data.aiResult.additionalProgramContext;
-                programContext += "\n";
-              }
+            if (!scopeRenamed) {
+              scopeRenamed = new Set();
+              renamed.set(path.scope.uid, scopeRenamed);
             }
 
+            scopeRenamed.add(aiResult.newName);
+
+            if (programContext !== false && aiResult.additionalProgramContext) {
+              consola.debug(
+                "Adding additional program context:",
+                aiResult.additionalProgramContext,
+              );
+
+              programContext += aiResult.additionalProgramContext;
+              programContext += "\n";
+            }
+          },
+
+          traverse({ push }: { push: (data: PushData) => void }) {
             return {
               Identifier(path: NodePath<Identifier>) {
                 const { name } = path.node;
@@ -102,19 +124,6 @@ export async function deobfuscate(
 
                 if (scopeRenamed?.has(name)) {
                   return;
-                }
-
-                function guessNewIdentifierName(
-                  ...args: ParametersButFirst<typeof ai.guessNewIdentifierName>
-                ) {
-                  const bindings = Object.keys(path.scope.getAllBindings());
-                  const result = ai.guessNewIdentifierName(bindings, ...args);
-
-                  if (options.saveCacheOnAIGuess && !result.cacheHit) {
-                    ai.cache?.save();
-                  }
-
-                  return result;
                 }
 
                 consola.debug("Traversing identifier:", name);
@@ -139,25 +148,10 @@ export async function deobfuscate(
                       container.end,
                     );
 
-                    consola.debug("Asking for new function name", {
-                      name,
-                      functionDeclarationText,
-                    });
-
-                    const aiResult = guessNewIdentifierName(
-                      "function",
-                      functionDeclarationText,
-                      programContext,
-                    );
-
-                    consola.debug("Got new function name:", {
-                      name,
-                      aiResult,
-                    });
-
                     push({
                       path,
-                      aiResult,
+                      identifierType: "function",
+                      data: functionDeclarationText,
                     });
                   } else {
                     consola.warn("Function declaration too long, skipping");
@@ -187,20 +181,10 @@ export async function deobfuscate(
                         functionDeclarationText,
                       });
 
-                      const aiResult = guessNewIdentifierName(
-                        "parameter",
-                        `/* rename parameter "${name}" */\n${functionDeclarationText}`,
-                        programContext,
-                      );
-
-                      consola.debug("Got new parameter name:", {
-                        name,
-                        aiResult,
-                      });
-
                       push({
                         path,
-                        aiResult,
+                        identifierType: "parameter",
+                        data: `/* rename parameter "${name}" */\n${functionDeclarationText}`,
                       });
                     } else {
                       consola.warn(
@@ -266,20 +250,10 @@ export async function deobfuscate(
                         declarationText,
                       });
 
-                      const aiResult = guessNewIdentifierName(
-                        "variable",
-                        declarationText,
-                        programContext,
-                      );
-
-                      consola.debug("Got new variable name:", {
-                        name,
-                        aiResult,
-                      });
-
                       push({
                         path,
-                        aiResult,
+                        identifierType: "variable",
+                        data: declarationText,
                       });
                     } else {
                       consola.warn("Variable declaration type not supported");
@@ -304,20 +278,10 @@ export async function deobfuscate(
                     classDeclarationText,
                   });
 
-                  const aiResult = guessNewIdentifierName(
-                    "class",
-                    classDeclarationText,
-                    programContext,
-                  );
-
-                  consola.debug("Got new class name:", {
-                    name,
-                    aiResult,
-                  });
-
                   push({
                     path,
-                    aiResult,
+                    identifierType: "class",
+                    data: classDeclarationText,
                   });
 
                   return;
