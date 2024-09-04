@@ -12,7 +12,7 @@ export default new Command("deobfuscate")
   .option(
     "-o, --output <file>",
     "output file. Templates like {filename}, {hash}, {model} and {context} can be used",
-    "-",
+    "out/deobfuscated-{filename}-{hash}-{model}-{context}.js",
   )
   .addOption(
     new Option(
