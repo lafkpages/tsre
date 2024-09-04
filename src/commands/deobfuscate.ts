@@ -30,10 +30,7 @@ export default new Command("deobfuscate")
     "do not use the json_schema response_format, some APIs, like llama-server, do not support it",
     defaultAiProcOptions.supportsJsonSchema,
   )
-  .option(
-    "--custom-program-context <context>",
-    "program context to give to the AI",
-  )
+  .option("--program-context <context>", "program context to give to the AI")
   .option(
     "--no-program-context",
     "do not generate and provide program context to the AI",
@@ -47,10 +44,12 @@ export default new Command("deobfuscate")
         maxFunctionLength,
         output: outputFilePath,
         cache: useCache,
-        programContext: useProgramContext,
-        customProgramContext,
+        programContext: programContextOption,
       },
     ) => {
+      const useProgramContext = programContextOption !== false;
+      let customProgramContext = programContextOption || "";
+
       if (useProgramContext && customProgramContext) {
         customProgramContext += "\n";
       }
