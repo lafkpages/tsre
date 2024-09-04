@@ -88,6 +88,9 @@ export default new Command("deobfuscate")
                 },
               },
               model: { value: model },
+              context: {
+                value: useProgramContext ? "context" : "no-context",
+              },
             },
           ),
         );
