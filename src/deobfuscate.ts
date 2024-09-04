@@ -29,10 +29,7 @@ export async function deobfuscate(
   ai: AI,
   opts?: DeobfuscateOptions,
 ) {
-  // prettier-ignore
-  const options: Required<DeobfuscateOptions> =
-        {
-     
+  const options: Required<DeobfuscateOptions> = {
     maxFunctionLength: 500,
 
     programContext: "",
@@ -42,16 +39,10 @@ export async function deobfuscate(
     ...opts,
   };
 
-  // For some reason, Prettier removes the <string>
-  // type annotation from the Set, so we have to
-  // prettier-ignore
   const renamed = new Map<number, Set<string>>();
 
-  // prettier-ignore
-  type IdentifierNodePath = NodePath<Identifier>;
-
   interface PushData {
-    path: IdentifierNodePath;
+    path: NodePath<Identifier>;
     aiResult: AIResult;
   }
 
@@ -101,7 +92,7 @@ export async function deobfuscate(
             }
 
             return {
-              Identifier(path: IdentifierNodePath) {
+              Identifier(path: NodePath<Identifier>) {
                 const { name } = path.node;
                 if (!path.scope.hasBinding(name)) {
                   return;
@@ -114,8 +105,7 @@ export async function deobfuscate(
                 }
 
                 function guessNewIdentifierName(
-                  ...args: // prettier-ignore
-                  ParametersButFirst<typeof ai.guessNewIdentifierName>
+                  ...args: ParametersButFirst<typeof ai.guessNewIdentifierName>
                 ) {
                   const bindings = Object.keys(path.scope.getAllBindings());
                   const result = ai.guessNewIdentifierName(bindings, ...args);
@@ -231,18 +221,16 @@ export async function deobfuscate(
                   // The ArrayPattern logic allows renaming of destructured variables,
                   // e.g. `const [a, b] = [1, 2]`
 
-                  // prettier-ignore
-                  type NodePathVariableDeclarator = NodePath<VariableDeclarator>;
-
                   const declarator = isArrayDeclarator
                     ? (path.parentPath.parent as VariableDeclarator)
                     : isBaseDeclarator
                       ? (path.parent as VariableDeclarator)
                       : null;
                   const declaratorPath = isArrayDeclarator
-                    ? (path.parentPath.parentPath as NodePathVariableDeclarator)
+                    ? (path.parentPath
+                        .parentPath as NodePath<VariableDeclarator>)
                     : isBaseDeclarator
-                      ? (path.parentPath as NodePathVariableDeclarator)
+                      ? (path.parentPath as NodePath<VariableDeclarator>)
                       : null;
 
                   if (

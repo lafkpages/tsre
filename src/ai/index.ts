@@ -8,10 +8,7 @@ import consola from "consola";
 
 import { defaultAiProcOptions } from "./common";
 
-// prettier-ignore
 type CacheData = Record<string, AIResult>;
-// prettier-ignore
-export type RequiredAIProcOptions = Required<AIProcOptions>;
 
 export class AI {
   model;
@@ -61,7 +58,7 @@ export class AI {
         JSON.stringify({
           model: this.model,
           supportsJsonSchema: this.supportsJsonSchema,
-        } satisfies RequiredAIProcOptions),
+        } satisfies Required<AIProcOptions>),
       ],
     });
 

@@ -2,7 +2,6 @@ import type {
   ChatCompletionMessageParam,
   ChatModel,
 } from "openai/resources/index";
-import type { RequiredAIProcOptions } from ".";
 
 import OpenAI from "openai";
 
@@ -13,7 +12,7 @@ async function guessNewIdentifierNameAsync(
   identifierType: string,
   data: string,
   context: string | false,
-  options: RequiredAIProcOptions,
+  options: Required<AIProcOptions>,
 ) {
   const messages: ChatCompletionMessageParam[] = [
     {
@@ -98,7 +97,7 @@ if (import.meta.main) {
   const identifierType = process.argv[3];
   const data = process.argv[4];
   const context = JSON.parse(process.argv[5]) as string | false;
-  const opts = JSON.parse(process.argv[6]) as RequiredAIProcOptions;
+  const opts = JSON.parse(process.argv[6]) as Required<AIProcOptions>;
 
   if (!identifierType || identifierType.length <= 1) {
     throw new Error("Invalid identifier type");
