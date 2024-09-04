@@ -11,7 +11,7 @@ export default new Command("deobfuscate")
   .arguments("<file>")
   .option(
     "-o, --output <file>",
-    "output file. Templates like {filename}, {hash} and {model} can be used",
+    "output file. Templates like {filename}, {hash}, {model} and {context} can be used",
     "-",
   )
   .addOption(
