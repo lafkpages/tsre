@@ -18,7 +18,7 @@ import putout from "putout";
 export interface DeobfuscateOptions {
   maxFunctionLength?: number;
 
-  programContext?: string;
+  programContext?: string | false;
 
   saveCacheOnAIGuess?: boolean;
 }
@@ -90,7 +90,10 @@ export async function deobfuscate(
 
               scopeRenamed.add(data.aiResult.newName);
 
-              if (data.aiResult.additionalProgramContext) {
+              if (
+                programContext !== false &&
+                data.aiResult.additionalProgramContext
+              ) {
                 programContext += data.aiResult.additionalProgramContext;
                 programContext += "\n";
               }

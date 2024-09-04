@@ -9,7 +9,7 @@ import { defaultAiProcOptions } from "./common";
 // prettier-ignore
 type CacheData = Record<string, AIResult>;
 // prettier-ignore
-type RequiredAIProcOptions = Required<AIProcOptions>;
+export type RequiredAIProcOptions = Required<AIProcOptions>;
 
 export class AI {
   model;
@@ -29,18 +29,18 @@ export class AI {
     usedBindings: string[],
     identifierType: string,
     data: string,
-    context?: string,
-  ) {
-    context ||= "";
-
+    context: string | false,
+  ): AIGuess {
     let cacheHash: number;
     if (this.cache) {
-      cacheHash = getCacheHash(identifierType, data, context);
+      cacheHash = getCacheHash(identifierType, data, context || "");
       const cached = this.cache.cacheData.get(cacheHash);
 
       if (cached) {
         return {
           ...cached,
+          additionalProgramContext:
+            context === false ? null : cached.additionalProgramContext,
           cacheHit: true,
         };
       }
@@ -55,11 +55,11 @@ export class AI {
         usedBindings.join(","),
         identifierType,
         data,
+        JSON.stringify(context),
         JSON.stringify({
           model: this.model,
           supportsJsonSchema: this.supportsJsonSchema,
         } satisfies RequiredAIProcOptions),
-        context,
       ],
     });
 
@@ -113,7 +113,11 @@ export class AICache {
 
 export interface AIResult {
   newName: string;
-  additionalProgramContext?: string;
+  additionalProgramContext?: string | null;
+}
+
+export interface AIGuess extends AIResult {
+  cacheHit: boolean;
 }
 
 function getCacheHash(identifierType: string, data: string, context: string) {

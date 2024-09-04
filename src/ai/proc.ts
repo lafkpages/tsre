@@ -2,10 +2,9 @@ import type {
   ChatCompletionMessageParam,
   ChatModel,
 } from "openai/resources/index";
+import type { RequiredAIProcOptions } from ".";
 
 import OpenAI from "openai";
-
-import { defaultAiProcOptions } from "./common";
 
 export const openai = new OpenAI();
 
@@ -13,15 +12,9 @@ async function guessNewIdentifierNameAsync(
   usedBindings: string,
   identifierType: string,
   data: string,
-  context?: string,
-  opts?: AIProcOptions,
+  context: string | false,
+  options: RequiredAIProcOptions,
 ) {
-  // prettier-ignore
-  const options: Required<AIProcOptions> = {
-   ...defaultAiProcOptions,
-    ...opts,
-  };
-
   const messages: ChatCompletionMessageParam[] = [
     {
       role: "system",
@@ -31,18 +24,20 @@ async function guessNewIdentifierNameAsync(
       role: "system",
       content: `You must not use any of the following names as they are already used in the program: ${usedBindings}`,
     },
-    {
+  ];
+
+  if (context !== false) {
+    messages.push({
       role: "system",
       content:
         "You may also provide additional context about the program to help the AI make better suggestions in the future.",
-    },
-  ];
+    });
+  }
 
   if (!options.supportsJsonSchema) {
     messages.push({
       role: "system",
-      content:
-        "Respond with a JSON object like { newName: string; additionalProgramContext?: string }",
+      content: `Respond with a JSON object like { newName: string${context === false ? "" : "; additionalProgramContext?: string"} }`,
     });
   }
 
@@ -72,9 +67,12 @@ async function guessNewIdentifierNameAsync(
                 newName: {
                   type: "string",
                 },
-                additionalProgramContext: {
-                  type: "string",
-                },
+                additionalProgramContext:
+                  context === false
+                    ? undefined
+                    : {
+                        type: "string",
+                      },
               },
               required: ["newName"],
             },
@@ -99,8 +97,8 @@ if (import.meta.main) {
   const usedBindings = process.argv[2];
   const identifierType = process.argv[3];
   const data = process.argv[4];
-  const context = process.argv[6];
-  const opts = JSON.parse(process.argv[5]) as AIProcOptions;
+  const context = JSON.parse(process.argv[5]) as string | false;
+  const opts = JSON.parse(process.argv[6]) as RequiredAIProcOptions;
 
   if (!identifierType || identifierType.length <= 1) {
     throw new Error("Invalid identifier type");
