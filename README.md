@@ -2,6 +2,75 @@
 
 A JavaScript and TypeScript reverse engineering tool.
 
+Go from this:
+
+```js
+function y(b){return(b-32)*5/9}function z(b){return b*9/5+32}function A(b){return b-273.15}function B(b){return b+273.15}for await(let b of console){if(!b||b==="exit")break;const[,q,w,x]=b.match(/(\d+(?:\.\d+)?)\s*([fkc])\s*(?:in|to)\s*([fkc])/i)||[];if(!q||!w||!x){console.log("Invalid input");continue}const j=parseFloat(q);let g;switch(w.toLowerCase()+x.toLowerCase()){case"fc":g=y(j);break;case"cf":g=z(j);break;case"kc":g=A(j);break;case"ck":g=B(j);break;default:console.log("Invalid conversion");continue}console.log(g)}
+```
+
+To this:
+
+```js
+function convertFahrenheitToCelsius(fahrenheitTemperature) {
+  return ((fahrenheitTemperature - 32) * 5) / 9;
+}
+
+function convertCelsiusToFahrenheit(celsiusTemperature) {
+  return (celsiusTemperature * 9) / 5 + 32;
+}
+
+function convertKelvinToCelsius(kelvinTemperature) {
+  return kelvinTemperature - 273.15;
+}
+
+function convertCelsiusToKelvin(celsiusTemperature) {
+  return celsiusTemperature + 273.15;
+}
+
+for await (let consoleLogEntries of console) {
+  if (!consoleLogEntries || consoleLogEntries === "exit") break;
+
+  const [, temperatureValue, matchedTemperatureValue, matchedTemperature] =
+    consoleLogEntries.match(
+      /(\d+(?:\.\d+)?)\s*([fkc])\s*(?:in|to)\s*([fkc])/i,
+    ) || [];
+
+  if (!temperatureValue || !matchedTemperatureValue || !matchedTemperature) {
+    console.log("Invalid input");
+    continue;
+  }
+
+  const parsedTemperature = parseFloat(temperatureValue);
+  let g;
+
+  switch (
+    matchedTemperatureValue.toLowerCase() + matchedTemperature.toLowerCase()
+  ) {
+    case "fc":
+      g = convertFahrenheitToCelsius(parsedTemperature);
+      break;
+
+    case "cf":
+      g = convertCelsiusToFahrenheit(parsedTemperature);
+      break;
+
+    case "kc":
+      g = convertKelvinToCelsius(parsedTemperature);
+      break;
+
+    case "ck":
+      g = convertCelsiusToKelvin(parsedTemperature);
+      break;
+
+    default:
+      console.log("Invalid conversion");
+      continue;
+  }
+
+  console.log(g);
+}
+```
+
 ## Installation
 
 > [!WARNING]  
